@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quelle dérive thérapeutique es-tu ?</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #f3f0f8; color: #333; display: flex; justify-content: center; padding: 20px; }
+  .container { max-width: 600px; width: 100%; background: #fff; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); padding: 30px; }
+  h1 { text-align: center; color: #6a0dad; }
+  button { background: #6a0dad; color: #fff; border: none; padding: 10px 20px; margin-top: 10px; cursor: pointer; border-radius: 8px; }
+  button:hover { background: #5809a0; }
+  .progress-container { width: 100%; background: #ddd; border-radius: 20px; margin: 15px 0; }
+  .progress-bar { width: 0%; height: 20px; background: #6a0dad; border-radius: 20px; transition: width 0.3s; }
+  .question { margin-top: 20px; }
+  .answers button { display: block; width: 100%; margin: 8px 0; text-align: left; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Quelle dérive thérapeutique es-tu ?</h1>
+  
+  <!-- Entrée prénom -->
+  <div id="name-entry">
+    <label for="username">Entre ton prénom :</label>
+    <input type="text" id="username" placeholder="Ex: Alice">
+    <button onclick="startQuiz()">Commencer</button>
+  </div>
+
+  <!-- Barre de progression -->
+  <div class="progress-container" style="display:none;">
+    <div class="progress-bar" id="progress-bar"></div>
+  </div>
+
+  <!-- Quiz -->
+  <div id="quiz"></div>
+</div>
+
+<script>
+// Profils
+const profiles = {
+  "Lithothérapie" : {desc:"Tu crois que des cailloux peuvent résoudre tous tes problèmes. Si une pierre ne marche pas, une autre, plus chère, fera l'affaire…"},
+  "Chromathérapie" : {desc:"Tu vois la vie en couleurs… trop, peut-être. Une couleur pour chaque humeur, mais attention aux arc-en-ciels incontrôlés !"},
+  "Ostéopathie" : {desc:"Tu penses qu’on peut tout remettre en place en tordant un bras ou en massant le dos. Tu dois avoir des potes qui te supplient d'arrêter..."},
+  "Aromathérapie" : {desc:"Pour toi, un diffuseur d’huiles essentielles est plus important qu’un médecin. Tu peux transformer n’importe quelle pièce en parfumerie ambulante…"}
+};
+
+// Questions évasives
+const questions = [
+  {q:"Quel sens utilises-tu le plus ?", a:["Vue","Ouïe","Toucher","Odorat"]},
+  {q:"Quelle était ta matière préférée à l'école ?", a:["Mathématiques","Arts plastiques","Sport","Musique"]},
+  {q:"Quelle activité te détend le plus ?", a:["Lecture","Danse","Yoga","Cuisine"]},
+  {q:"Quel type de vacances préfères-tu ?", a:["Montagne","Plage","Ville","Campagne"]},
+  {q:"Quel animal représente le mieux ta personnalité ?", a:["Chat","Chien","Oiseau","Poisson"]}
+];
+
+// Scores
+let scores = { "Lithothérapie":0, "Chromathérapie":0, "Ostéopathie":0, "Aromathérapie":0 };
+let current = 0;
+let username = "";
+
+// Commencer quiz
+function startQuiz(){
+  const input = document.getElementById("username").value.trim();
+  if(input === ""){ alert("Merci d'entrer ton prénom !"); return; }
+  username = input;
+  document.getElementById("name-entry").style.display = "none";
+  document.querySelector(".progress-container").style.display = "block";
+  showQuestion();
+}
+
+// Affichage question
+function showQuestion(){
+  if(current >= questions.length){ finishQuiz(); return; }
+  updateProgress();
+  const q = questions[current];
+  let html = `<div class="question"><h3>${q.q}</h3><div class="answers">`;
+  q.a.forEach((ans,i)=>{
+    html += `<button onclick="answer(${i})">${ans}</button>`;
+  });
+  html += "</div></div>";
+  document.getElementById("quiz").innerHTML = html;
+}
+
+// Répondre
+function answer(index){
+  // Répartition aléatoire des réponses vers les profils pour garder le côté surprise
+  const keys = Object.keys(profiles);
+  scores[keys[index%4]] += 1;
+  current++;
+  showQuestion();
+}
+
+// Barre de progression
+function updateProgress(){
+  const percent = Math.round((current/questions.length)*100);
+  document.getElementById("progress-bar").style.width = percent + "%";
+}
+
+// Fin quiz
+function finishQuiz(){
+  let max = 0, resultProfile = "";
+  for(let key in scores){ if(scores[key] > max){ max = scores[key]; resultProfile = key; } }
+
+  // Envoyer résultat à Google Sheets
+  sendResultToSheet(username, resultProfile);
+
+  // Affichage minimal pour garder la surprise
+  document.getElementById("quiz").innerHTML = "<h2>Merci pour ta participation !</h2><p>Les résultats seront révélés à la fin du week-end.</p>";
+  document.querySelector(".progress-container").style.display = "none";
+}
+
+// Fonction pour envoyer à Google Sheets
+function sendResultToSheet(prenom, profil){
+  fetch("https://script.google.com/macros/s/AKfycbxo-yQb73TUcN-vG4cDRLTIEA53KX6kih8XafcGPQMDCAFAu8nMcziu_l7-5oc0s1gn/exec", {
+    method:"POST",
+    body: JSON.stringify({prenom: prenom, profil: profil})
+  })
+  .then(res=>res.json())
+  .then(data=>console.log("Résultat enregistré :", data))
+  .catch(err=>console.error("Erreur :", err));
+}
+</script>
+</body>
+</html>
